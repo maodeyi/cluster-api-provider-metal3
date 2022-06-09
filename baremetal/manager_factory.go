@@ -63,11 +63,9 @@ func (f ManagerFactory) NewClusterManager(cluster *clusterv1.Cluster, capm3Clust
 }
 
 // NewMachineManager creates a new MachineManager.
-func (f ManagerFactory) NewMachineManager(capiCluster *clusterv1.Cluster,
-	capm3Cluster *infrav1.Metal3Cluster,
-	capiMachine *clusterv1.Machine, capm3Machine *infrav1.Metal3Machine,
+func (f ManagerFactory) NewMachineManager(capiMachine *clusterv1.Machine, capm3Machine *infrav1.Metal3Machine,
 	machineLog logr.Logger) (MachineManagerInterface, error) {
-	return NewMachineManager(f.client, capiCluster, capm3Cluster, capiMachine,
+	return NewMachineManager(f.client, capiMachine,
 		capm3Machine, machineLog)
 }
 

@@ -121,14 +121,10 @@ type MachineManager struct {
 
 // NewMachineManager returns a new helper for managing a machine.
 func NewMachineManager(client client.Client,
-	cluster *clusterv1.Cluster, metal3Cluster *infrav1.Metal3Cluster,
 	machine *clusterv1.Machine, metal3machine *infrav1.Metal3Machine,
 	machineLog logr.Logger) (*MachineManager, error) {
 	return &MachineManager{
-		client: client,
-
-		Cluster:       cluster,
-		Metal3Cluster: metal3Cluster,
+		client:        client,
 		Machine:       machine,
 		Metal3Machine: metal3machine,
 		Log:           machineLog,

@@ -63,8 +63,7 @@ var _ = Describe("Manager factory testing", func() {
 	})
 
 	It("returns a metal3 machine manager", func() {
-		_, err := managerFactory.NewMachineManager(&clusterv1.Cluster{},
-			&infrav1.Metal3Cluster{}, &clusterv1.Machine{}, &infrav1.Metal3Machine{},
+		_, err := managerFactory.NewMachineManager(&clusterv1.Machine{}, &infrav1.Metal3Machine{},
 			clusterLog,
 		)
 		Expect(err).NotTo(HaveOccurred())
