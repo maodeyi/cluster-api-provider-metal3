@@ -31,7 +31,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -114,62 +113,62 @@ func (r *Metal3MachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	machineLog = machineLog.WithValues("machine", capiMachine.Name)
 
 	// Fetch the Cluster.
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, capiMachine.ObjectMeta)
-	if err != nil {
-		setErrorM3Machine(capm3Machine, "", "")
-		machineLog.Info("Machine is missing cluster label or cluster does not exist")
-		return ctrl.Result{}, nil
-	}
-
-	machineLog = machineLog.WithValues("cluster", cluster.Name)
+	//cluster, err := util.GetClusterFromMetadata(ctx, r.Client, capiMachine.ObjectMeta)
+	//if err != nil {
+	//	setErrorM3Machine(capm3Machine, "", "")
+	//	machineLog.Info("Machine is missing cluster label or cluster does not exist")
+	//	return ctrl.Result{}, nil
+	//}
+	//
+	//machineLog = machineLog.WithValues("cluster", cluster.Name)
 
 	// Make sure infrastructure is ready
-	if !cluster.Status.InfrastructureReady {
-		machineLog.Info("Waiting for Metal3Cluster Controller to create cluster infrastructure")
-		conditions.MarkFalse(capm3Machine, infrav1.AssociateBMHCondition, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
-		return ctrl.Result{}, nil
-	}
-
-	// Fetch the Metal3 cluster.
-	metal3Cluster := &infrav1.Metal3Cluster{}
-	metal3ClusterName := types.NamespacedName{
-		Namespace: capm3Machine.Namespace,
-		Name:      cluster.Spec.InfrastructureRef.Name,
-	}
-	if err := r.Client.Get(ctx, metal3ClusterName, metal3Cluster); err != nil {
-		machineLog.Info("Waiting for Metal3Cluster Controller to create the Metal3Cluster")
-		return ctrl.Result{}, nil
-	}
-
-	machineLog = machineLog.WithValues("metal3-cluster", metal3Cluster.Name)
+	//if !cluster.Status.InfrastructureReady {
+	//	machineLog.Info("Waiting for Metal3Cluster Controller to create cluster infrastructure")
+	//	conditions.MarkFalse(capm3Machine, infrav1.AssociateBMHCondition, infrav1.WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
+	//	return ctrl.Result{}, nil
+	//}
+	//
+	//// Fetch the Metal3 cluster.
+	//metal3Cluster := &infrav1.Metal3Cluster{}
+	//metal3ClusterName := types.NamespacedName{
+	//	Namespace: capm3Machine.Namespace,
+	//	Name:      cluster.Spec.InfrastructureRef.Name,
+	//}
+	//if err := r.Client.Get(ctx, metal3ClusterName, metal3Cluster); err != nil {
+	//	machineLog.Info("Waiting for Metal3Cluster Controller to create the Metal3Cluster")
+	//	return ctrl.Result{}, nil
+	//}
+	//
+	//machineLog = machineLog.WithValues("metal3-cluster", metal3Cluster.Name)
 
 	// Create a helper for managing the baremetal container hosting the machine.
-	machineMgr, err := r.ManagerFactory.NewMachineManager(cluster, metal3Cluster, capiMachine, capm3Machine, machineLog)
+	machineMgr, err := r.ManagerFactory.NewMachineManager(capiMachine, capm3Machine, machineLog)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrapf(err, "failed to create helper for managing the machineMgr")
 	}
 
 	// Check pause annotation on associated bmh (if any)
-	if !cluster.Spec.Paused {
-		err := machineMgr.RemovePauseAnnotation(ctx)
-		if err != nil {
-			machineLog.Info("failed to check pause annotation on associated bmh")
-			return ctrl.Result{}, nil
-		}
-	} else {
-		// set pause annotation on associated bmh (if any)
-		err := machineMgr.SetPauseAnnotation(ctx)
-		if err != nil {
-			machineLog.Info("failed to set pause annotation on associated bmh")
-			return ctrl.Result{}, nil
-		}
-	}
-
-	// Return early if the M3Machine or Cluster is paused.
-	if annotations.IsPaused(cluster, capm3Machine) {
-		machineLog.Info("reconciliation is paused for this object")
-		return ctrl.Result{Requeue: true, RequeueAfter: requeueAfter}, nil
-	}
+	//if !cluster.Spec.Paused {
+	//	err := machineMgr.RemovePauseAnnotation(ctx)
+	//	if err != nil {
+	//		machineLog.Info("failed to check pause annotation on associated bmh")
+	//		return ctrl.Result{}, nil
+	//	}
+	//} else {
+	//	// set pause annotation on associated bmh (if any)
+	//	err := machineMgr.SetPauseAnnotation(ctx)
+	//	if err != nil {
+	//		machineLog.Info("failed to set pause annotation on associated bmh")
+	//		return ctrl.Result{}, nil
+	//	}
+	//}
+	//
+	//// Return early if the M3Machine or Cluster is paused.
+	//if annotations.IsPaused(cluster, capm3Machine) {
+	//	machineLog.Info("reconciliation is paused for this object")
+	//	return ctrl.Result{Requeue: true, RequeueAfter: requeueAfter}, nil
+	//}
 
 	// Handle deleted machines
 	if !capm3Machine.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -313,14 +312,14 @@ func (r *Metal3MachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl
 			&source.Kind{Type: &clusterv1.Machine{}},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrav1.GroupVersion.WithKind("Metal3Machine"))),
 		).
-		Watches(
-			&source.Kind{Type: &clusterv1.Cluster{}},
-			handler.EnqueueRequestsFromMapFunc(r.ClusterToMetal3Machines),
-		).
-		Watches(
-			&source.Kind{Type: &infrav1.Metal3Cluster{}},
-			handler.EnqueueRequestsFromMapFunc(r.Metal3ClusterToMetal3Machines),
-		).
+		//Watches(
+		//	&source.Kind{Type: &clusterv1.Cluster{}},
+		//	handler.EnqueueRequestsFromMapFunc(r.ClusterToMetal3Machines),
+		//).
+		//Watches(
+		//	&source.Kind{Type: &infrav1.Metal3Cluster{}},
+		//	handler.EnqueueRequestsFromMapFunc(r.Metal3ClusterToMetal3Machines),
+		//).
 		Watches(
 			&source.Kind{Type: &infrav1.Metal3DataClaim{}},
 			handler.EnqueueRequestsFromMapFunc(r.Metal3DataClaimToMetal3Machines),

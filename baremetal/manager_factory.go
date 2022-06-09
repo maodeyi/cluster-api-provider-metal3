@@ -29,7 +29,7 @@ type ManagerFactoryInterface interface {
 		metal3Cluster *infrav1.Metal3Cluster,
 		clusterLog logr.Logger,
 	) (ClusterManagerInterface, error)
-	NewMachineManager(*clusterv1.Cluster, *infrav1.Metal3Cluster, *clusterv1.Machine,
+	NewMachineManager(*clusterv1.Machine,
 		*infrav1.Metal3Machine, logr.Logger,
 	) (MachineManagerInterface, error)
 	NewDataTemplateManager(*infrav1.Metal3DataTemplate, logr.Logger) (
